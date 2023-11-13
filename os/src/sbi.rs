@@ -5,6 +5,7 @@ use core::arch::asm;
 const SBI_CONSOLE_PUTCHAR: usize = 1;
 
 /// general sbi call
+/// check two tables in man 2 syscall
 #[inline(always)]
 fn sbi_call(which: usize, arg0: usize, arg1: usize, arg2: usize) -> usize {
     let mut ret;
