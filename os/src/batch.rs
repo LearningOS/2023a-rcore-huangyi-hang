@@ -66,11 +66,9 @@ impl AppManager {
         }
     }
 
-    unsafe fn load_app(&self, app_id: usize) {
+    unsafe fn load_app(&self, mut app_id:  usize) {
         if app_id >= self.num_app {
-            println!("All applications completed!");
-            use crate::board::QEMUExit;
-            crate::board::QEMU_EXIT_HANDLE.exit_success();
+            app_id  = app_id % self.num_app;
         }
         println!("[kernel] Loading app_{}", app_id);
         // clear app area
