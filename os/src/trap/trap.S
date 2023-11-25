@@ -37,14 +37,19 @@ __alltraps:
     mv a0, sp
     call trap_handler
 
+# restore TrapContext in current kernel stack for following user code
 __restore:
     # now sp->kernel stack(after allocated), sscratch->user stack
     # restore sstatus/sepc
+    # in fact, now sp->TrapContext of current kernel stack of current task
     ld t0, 32*8(sp)
     ld t1, 33*8(sp)
     ld t2, 2*8(sp)
+    # sstatus->user mode
     csrw sstatus, t0
+    # sepc->entry of current task
     csrw sepc, t1
+    # sscratch->user stack
     csrw sscratch, t2
     # restore general-purpuse registers except sp/tp
     ld x1, 1*8(sp)
