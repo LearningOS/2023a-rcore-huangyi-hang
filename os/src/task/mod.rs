@@ -14,7 +14,7 @@ mod switch;
 #[allow(clippy::module_inception)]
 mod task;
 
-use crate::config::MAX_APP_NUM;
+use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
 use crate::loader::{get_num_app, init_app_cx};
 use crate::sync::UPSafeCell;
 use lazy_static::*;
@@ -54,8 +54,12 @@ lazy_static! {
         let mut tasks = [TaskControlBlock {
             task_cx: TaskContext::zero_init(),
             task_status: TaskStatus::UnInit,
+            syscall_times: [0; MAX_SYSCALL_NUM],
+            start_time: 0,
         }; MAX_APP_NUM];
         for (i, task) in tasks.iter_mut().enumerate() {
+            // init_app_cx: init trap context, then push it to corresponding kernel stack 
+            // goto_restore: set ra to __restore and sp to kernel_stack
             task.task_cx = TaskContext::goto_restore(init_app_cx(i));
             task.task_status = TaskStatus::Ready;
         }
@@ -123,6 +127,7 @@ impl TaskManager {
             let current = inner.current_task;
             inner.tasks[next].task_status = TaskStatus::Running;
             inner.current_task = next;
+            //inner.tasks[next].start_time = get_time_ms();
             let current_task_cx_ptr = &mut inner.tasks[current].task_cx as *mut TaskContext;
             let next_task_cx_ptr = &inner.tasks[next].task_cx as *const TaskContext;
             drop(inner);
@@ -134,6 +139,25 @@ impl TaskManager {
         } else {
             panic!("All applications completed!");
         }
+    }
+
+//    fn set_start_time(&self, id: usize) {
+//
+//    }
+
+    /// Increase syscall time fo current task
+    fn increase_syscall_time(&self, syscall_id: usize) {
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        inner.tasks[current].syscall_times[syscall_id] += 1;
+    }
+    
+
+    /// Return task block co current
+    fn get_current_task_block(&self) -> TaskControlBlock {
+        let inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        inner.tasks[current].clone()
     }
 }
 
@@ -168,4 +192,15 @@ pub fn suspend_current_and_run_next() {
 pub fn exit_current_and_run_next() {
     mark_current_exited();
     run_next_task();
+}
+
+/// Increase syscall count of current task
+pub fn increase_syscall_time(syscall_id: usize) {
+    TASK_MANAGER.increase_syscall_time(syscall_id);
+}
+
+/// Return task block of current
+pub fn get_current_task_block() -> TaskControlBlock {
+    TASK_MANAGER.get_current_task_block()
+
 }

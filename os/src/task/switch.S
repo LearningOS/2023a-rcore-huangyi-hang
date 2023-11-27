@@ -23,7 +23,7 @@ __switch:
         .set n, n + 1
     .endr
     # restore ra & s0~s11 of next execution
-    # now 0(a1) saved the __restore, so after ret, it will execute __restore
+    # after this ra saved the __restore, so after ret, it will execute __restore
     ld ra, 0(a1)
     .set n, 0
     .rept 12
@@ -31,6 +31,7 @@ __switch:
         .set n, n + 1
     .endr
     # restore kernel stack of next task
+    # sp->kernel stack
     ld sp, 8(a1)
     # ret to __restore, because ra 
     ret
